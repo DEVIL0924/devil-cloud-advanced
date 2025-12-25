@@ -1,1 +1,475 @@
+{% extends "layout.html" %}
 
+{% block title %}Admin Panel - DEVIL CLOUD{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-actions {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+    
+    .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .config-item {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Admin Panel</h1>
+    <p>Manage users, bots, and system configuration</p>
+</div>
+
+<div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <h3>Admin Tools</h3>
+            <div class="sidebar-links">
+                <a href="#users" class="active">
+                    <i class="fas fa-users"></i> User Management
+                </a>
+                <a href="#bots">
+                    <i class="fas fa-robot"></i> All Bots
+                </a>
+                <a href="#config">
+                    <i class="fas fa-cog"></i> Configuration
+                </a>
+                <a href="#system">
+                    <i class="fas fa-server"></i> System Status
+                </a>
+                <a href="#logs">
+                    <i class="fas fa-file-alt"></i> System Logs
+                </a>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <h3>Quick Actions</h3>
+            <div class="sidebar-links">
+                <a href="/admin/clear_logs" onclick="return confirm('Clear all logs?')">
+                    <i class="fas fa-trash"></i> Clear Logs
+                </a>
+                <a href="#" id="restart-monitor">
+                    <i class="fas fa-redo"></i> Restart Monitor
+                </a>
+                <a href="#" id="backup-data">
+                    <i class="fas fa-download"></i> Backup Data
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="users">Users ({{ users|length }})</button>
+            <button class="tab" data-tab="bots">Bots ({{ bots|length }})</button>
+            <button class="tab" data-tab="config">Configuration</button>
+            <button class="tab" data-tab="system">System</button>
+        </div>
+        
+        <!-- Users Tab -->
+        <div id="users" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">User Management</h2>
+                    <button class="btn btn-sm btn-primary" id="add-user-btn">
+                        <i class="fas fa-plus"></i> Add User
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Bots</th>
+                                <th>Storage</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for username, user in users.items() %}
+                            <tr>
+                                <td>
+                                    <strong>{{ username }}</strong>
+                                    {% if user.is_admin %}
+                                    <span class="badge bg-primary ms-1">Admin</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.active %}
+                                    <span class="bot-status status-running">Active</span>
+                                    {% else %}
+                                    <span class="bot-status status-stopped">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.bots|length if user.bots else 0 }} / {{ user.bot_limit }}</td>
+                                <td>{{ user.storage_limit }} MB</td>
+                                <td>{{ user.created_at[:10] }}</td>
+                                <td>
+                                    <div class="user-actions">
+                                        <button class="btn btn-sm btn-outline" 
+                                                onclick="toggleUser('{{ username }}')">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline"
+                                                onclick="editUser('{{ username }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger"
+                                                onclick="deleteUser('{{ username }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bots Tab -->
+        <div id="bots" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Bots ({{ bots|length }})</h2>
+                    <div>
+                        <span class="badge bg-success">
+                            Running: {{ stats.running_bots }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>User</th>
+                                <th>Language</th>
+                                <th>Status</th>
+                                <th>CPU/Memory</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bot_id, bot in bots.items() %}
+                            <tr>
+                                <td><code>{{ bot_id[:8] }}</code></td>
+                                <td>{{ bot.name }}</td>
+                                <td>{{ bot.username }}</td>
+                                <td>
+                                    <span class="language-badge language-{{ bot.language }}">
+                                        {{ bot.language|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="bot-status status-{{ bot.status }}">
+                                        <i class="fas fa-circle"></i> {{ bot.status|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if bot.status == 'running' %}
+                                    {{ "%.1f"|format(bot.cpu_usage) }}% / {{ "%.1f"|format(bot.memory_usage) }}MB
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>{{ bot.created_at[:10] }}</td>
+                                <td>
+                                    <div class="user-actions">
+                                        {% if bot.status == 'running' %}
+                                        <a href="/stop/{{ bot_id }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-stop"></i>
+                                        </a>
+                                        {% else %}
+                                        <a href="/start/{{ bot_id }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-play"></i>
+                                        </a>
+                                        {% endif %}
+                                        <a href="/logs/{{ bot_id }}" class="btn btn-sm btn-outline">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="/delete/{{ bot_id }}" 
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('Delete this bot?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Config Tab -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System Configuration</h2>
+                </div>
+                
+                <form action="/admin/update_config" method="post" class="p-4">
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label class="form-label">Site Name</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="site_name" 
+                                   value="{{ config.site_name }}">
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="form-label">Admin Password</label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   name="admin_password" 
+                                   value="{{ config.admin_password }}">
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="form-label">Default User Storage (MB)</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="default_user_storage" 
+                                   value="{{ config.default_user_storage }}">
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="form-label">Default User Bot Limit</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="default_user_bot_limit" 
+                                   value="{{ config.default_user_bot_limit }}">
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="form-label">
+                                <input type="checkbox" 
+                                       name="auto_start_bots" 
+                                       {% if config.auto_start_bots %}checked{% endif %}>
+                                Auto Start Bots
+                            </label>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="form-label">
+                                <input type="checkbox" 
+                                       name="maintenance_mode" 
+                                       {% if config.maintenance_mode %}checked{% endif %}>
+                                Maintenance Mode
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- System Tab -->
+        <div id="system" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System Status</h2>
+                </div>
+                
+                <div class="p-4">
+                    <div class="row" id="detailed-system-info">
+                        <!-- Will be populated by JavaScript -->
+                        <div class="loading"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal" id="addUserModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add New User</h3>
+            <button class="close-btn" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Is Admin</label>
+                    <select class="form-select" name="is_admin">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Storage Limit (MB)</label>
+                    <input type="number" class="form-control" name="storage_limit" value="500">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bot Limit</label>
+                    <input type="number" class="form-control" name="bot_limit" value="10">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('addUserModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitUserForm()">Add User</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        const tabName = this.getAttribute('data-tab');
+        
+        // Update active tab
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Show corresponding content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+    });
+});
+
+// User management functions
+function toggleUser(username) {
+    if (confirm('Toggle user active status?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/manage_user/${username}`;
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'action';
+        input.value = 'toggle_active';
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function editUser(username) {
+    alert('Edit user: ' + username);
+    // Implementation for editing user
+}
+
+function deleteUser(username) {
+    if (confirm(`Are you sure you want to delete user "${username}"? This will also delete all their bots.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/manage_user/${username}`;
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'action';
+        input.value = 'delete';
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Modal functions
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Add user modal
+document.getElementById('add-user-btn').addEventListener('click', function() {
+    openModal('addUserModal');
+});
+
+function submitUserForm() {
+    document.getElementById('addUserForm').submit();
+}
+
+// Load detailed system info
+async function loadDetailedSystemInfo() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        if (data.system) {
+            const container = document.getElementById('detailed-system-info');
+            container.innerHTML = `
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>CPU Information</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Usage:</strong> ${data.system.cpu.toFixed(1)}%</p>
+                            <p><strong>Cores:</strong> ${navigator.hardwareConcurrency || 'Unknown'}</p>
+                            <div class="progress">
+                                <div class="progress-bar cpu" style="width: ${data.system.cpu}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Memory Information</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Used:</strong> ${Math.round(data.system.memory_used)} MB</p>
+                            <p><strong>Total:</strong> ${Math.round(data.system.memory_total)} MB</p>
+                            <p><strong>Percentage:</strong> ${data.system.memory_percent.toFixed(1)}%</p>
+                            <div class="progress">
+                                <div class="progress-bar memory" style="width: ${data.system.memory_percent}%"></div>
+                   

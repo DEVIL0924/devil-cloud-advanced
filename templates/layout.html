@@ -1,1 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DEVIL CLOUD HOSTING{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/dashboard" class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <span>DEVIL CLOUD</span>
+                </a>
+                
+                <div class="nav-links">
+                    <a href="/dashboard" class="{% if request.path == '/dashboard' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                    <a href="/upload" class="{% if request.path == '/upload' %}active{% endif %}">
+                        <i class="fas fa-upload"></i> Upload Bot
+                    </a>
+                    {% if session.is_admin %}
+                    <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">
+                        <i class="fas fa-cog"></i> Admin Panel
+                    </a>
+                    {% endif %}
+                    <a href="/settings">
+                        <i class="fas fa-user-cog"></i> Settings
+                    </a>
+                </div>
+                
+                <div class="user-menu">
+                    {% if session.logged_in %}
+                    <span class="badge">
+                        <i class="fas fa-user"></i> {{ session.username }}
+                        {% if session.is_admin %}(Admin){% endif %}
+                    </span>
+                    <a href="/logout" class="btn btn-sm btn-outline">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                    {% else %}
+                    <a href="/login" class="btn btn-sm btn-primary">Login</a>
+                    <a href="/register" class="btn btn-sm btn-outline">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Flash Messages -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category in ['success', 'error', 'warning', 'info'] else 'info' }} fade-in">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-5 mb-3">
+        <div class="card">
+            <div class="text-center">
+                <p class="mb-2">
+                    <i class="fas fa-cloud"></i> <strong>DEVIL CLOUD HOSTING</strong> 
+                    <span class="text-muted">| Multi-language Bot Hosting Platform</span>
+                </p>
+                <p class="text-muted small">
+                    © 2024 DEVIL CLOUD. All rights reserved. 
+                    <span class="mx-2">|</span>
+                    <a href="#" class="text-muted">Terms</a>
+                    <span class="mx-1">•</span>
+                    <a href="#" class="text-muted">Privacy</a>
+                    <span class="mx-1">•</span>
+                    <a href="#" class="text-muted">Support</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/js/dashboard.js"></script>
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

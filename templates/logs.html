@@ -1,52 +1,115 @@
 {% extends "layout.html" %}
 
-{% block title %}Login - DEVIL CLOUD{% endblock %}
+{% block title %}Logs - {{ bot.name }} - DEVIL CLOUD{% endblock %}
 
 {% block content %}
-<div class="center" style="min-height: 80vh;">
-    <div class="card" style="max-width: 400px; width: 100%;">
-        <div class="text-center mb-4">
-            <div class="logo-icon" style="width: 60px; height: 60px; margin: 0 auto 1rem;">
-                <i class="fas fa-cloud fa-2x"></i>
-            </div>
-            <h2>DEVIL CLOUD HOSTING</h2>
-            <p class="text-muted">Multi-language Bot Hosting Platform</p>
+<div class="dashboard-header">
+    <h1>Logs: {{ bot.name }}</h1>
+    <p>
+        <span class="language-badge language-{{ bot.language }}">{{ bot.language|upper }}</span>
+        <span class="bot-status status-{{ bot.status }} ms-2">{{ bot.status|upper }}</span>
+    </p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Bot Logs</h2>
+        <div>
+            <a href="/dashboard" class="btn btn-sm btn-outline">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <button class="btn btn-sm btn-primary" onclick="refreshLogs()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="logs-container" id="logs-container">
+            <pre>{{ logs }}</pre>
         </div>
         
-        <form method="post">
-            <div class="form-group">
-                <label class="form-label">Username</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="username" 
-                       placeholder="Enter username" 
-                       required
-                       autofocus>
+        <div class="mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Bot Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>ID:</strong> {{ bot.id }}</p>
+                            <p><strong>Filename:</strong> {{ bot.filename }}</p>
+                            <p><strong>Created:</strong> {{ bot.created_at[:19].replace('T', ' ') }}</p>
+                            {% if bot.last_started %}
+                            <p><strong>Last Started:</strong> {{ bot.last_started[:19].replace('T', ' ') }}</p>
+                            {% endif %}
+                            {% if bot.restart_count > 0 %}
+                            <p><strong>Restart Count:</strong> {{ bot.restart_count }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="btn-group-vertical w-100">
+                                {% if bot.status == 'running' %}
+                                <a href="/stop/{{ bot.id }}" class="btn btn-warning mb-2">
+                                    <i class="fas fa-stop"></i> Stop Bot
+                                </a>
+                                <a href="/restart/{{ bot.id }}" class="btn btn-primary mb-2">
+                                    <i class="fas fa-redo"></i> Restart Bot
+                                </a>
+                                {% else %}
+                                <a href="/start/{{ bot.id }}" class="btn btn-success mb-2">
+                                    <i class="fas fa-play"></i> Start Bot
+                                </a>
+                                {% endif %}
+                                <a href="/delete/{{ bot.id }}" 
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Are you sure you want to delete this bot?')">
+                                    <i class="fas fa-trash"></i> Delete Bot
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" 
-                       class="form-control" 
-                       name="password" 
-                       placeholder="Enter password" 
-                       required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary w-100 mb-3">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-            
-            <div class="text-center">
-                <p class="text-muted">
-                    Don't have an account? 
-                    <a href="/register" class="text-primary">Register here</a>
-                </p>
-                <p class="small text-muted">
-                    Default admin: username: <code>admin</code>, password: <code>admin123</code>
-                </p>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshLogs() {
+    window.location.reload();
+}
+
+// Auto-refresh logs every 30 seconds if bot is running
+{% if bot.status == 'running' %}
+setTimeout(function() {
+    refreshLogs();
+}, 30000);
+{% endif %}
+
+// Syntax highlighting for logs
+document.addEventListener('DOMContentLoaded', function() {
+    const logsContainer = document.getElementById('logs-container');
+    if (logsContainer) {
+        const logs = logsContainer.textContent;
+        let highlighted = logs
+            .replace(/ERROR|Error|error/g, '<span class="log-error">$&</span>')
+            .replace(/WARNING|Warning|warning/g, '<span class="log-warning">$&</span>')
+            .replace(/INFO|Info|info/g, '<span class="log-info">$&</span>')
+            .replace(/DEBUG|Debug|debug/g, '<span class="log-debug">$&</span>')
+            .replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g, '<span class="log-time">$&</span>');
+        
+        logsContainer.innerHTML = '<pre>' + highlighted + '</pre>';
+    }
+});
+</script>
 {% endblock %}

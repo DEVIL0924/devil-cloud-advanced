@@ -4,9 +4,10 @@ from datetime import datetime
 DATA_DIR = "data"
 BOTS_FILE = os.path.join(DATA_DIR, "bots.json")
 LOGS_DIR = "logs"
+BOTS_DIR = "bots"
 
 def monitor_bots():
-    print("🔧 DEVIL CLOUD - Bot Monitor Started")
+    print("DEVIL CLOUD - Bot Monitor Started")
     
     while True:
         try:
@@ -25,7 +26,7 @@ def monitor_bots():
                     
                     # Check if process is still running
                     if not psutil.pid_exists(pid):
-                        print(f"⚠️ Bot {bot_id} crashed, restarting...")
+                        print(f"Bot {bot_id} crashed, restarting...")
                         
                         # Update status
                         bot["status"] = "stopped"
@@ -43,16 +44,16 @@ def monitor_bots():
             time.sleep(5)
             
         except Exception as e:
-            print(f"❌ Monitor error: {e}")
+            print(f"Monitor error: {e}")
             time.sleep(10)
 
 def restart_bot(bot):
     """Restart a crashed bot"""
     try:
-        bot_path = os.path.join("bots", bot["filename"])
+        bot_path = os.path.join(BOTS_DIR, bot["filename"])
         
         if not os.path.exists(bot_path):
-            print(f"❌ Bot file not found: {bot_path}")
+            print(f"Bot file not found: {bot_path}")
             return
         
         log_path = os.path.join(LOGS_DIR, bot.get("log_file", f"bot_{int(time.time())}.log"))
@@ -60,7 +61,7 @@ def restart_bot(bot):
         
         with open(log_path, 'a') as log_file:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            log_file.write(f"\n[{timestamp}] 🔄 Bot auto-restarted\n")
+            log_file.write(f"\n[{timestamp}] Bot auto-restarted\n")
             
             if bot["language"] == "python":
                 cmd = ["python3", bot_path]
@@ -85,14 +86,15 @@ def restart_bot(bot):
         bot["last_started"] = datetime.now().isoformat()
         bot["restart_count"] = bot.get("restart_count", 0) + 1
         
-        print(f"✅ Bot {bot.get('name', 'unknown')} restarted (PID: {process.pid})")
+        print(f"Bot {bot.get('name', 'unknown')} restarted (PID: {process.pid})")
         
     except Exception as e:
-        print(f"❌ Failed to restart bot: {e}")
+        print(f"Failed to restart bot: {e}")
 
 if __name__ == "__main__":
     # Ensure directories exist
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(LOGS_DIR, exist_ok=True)
+    os.makedirs(BOTS_DIR, exist_ok=True)
     
     monitor_bots()

@@ -1,0 +1,35 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data
+data/bots.json
+data/users.json
+data/config.json
+data/stats.json
+
+# Logs
+logs/
+*.log
+
+# Uploads
+bots/
+users/
+
+# OS
+.DS_Store
+Thumbs.db

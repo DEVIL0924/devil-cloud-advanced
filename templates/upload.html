@@ -1,1 +1,250 @@
+{% extends "layout.html" %}
 
+{% block title %}Upload Bot - DEVIL CLOUD{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Upload New Bot</h1>
+    <p>Upload Python, PHP, Node.js, or Bash scripts</p>
+</div>
+
+<div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <h3>Supported Languages</h3>
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="language-badge language-python me-2">PY</span>
+                    <span>Python (.py)</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="language-badge language-php me-2">PHP</span>
+                    <span>PHP (.php)</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="language-badge language-node me-2">JS</span>
+                    <span>Node.js (.js)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="language-badge language-bash me-2">SH</span>
+                    <span>Bash (.sh)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <h3>Upload Tips</h3>
+            <ul class="small text-muted" style="padding-left: 1rem;">
+                <li class="mb-1">Maximum file size: 100MB</li>
+                <li class="mb-1">ZIP files will be automatically extracted</li>
+                <li class="mb-1">Python dependencies auto-installed</li>
+                <li class="mb-1">For ZIPs, include main.py, bot.py, or index.php</li>
+                <li>Logs are saved automatically</li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="card">
+            <form action="/upload" method="post" enctype="multipart/form-data" class="fade-in">
+                <div class="form-group">
+                    <label class="form-label" for="bot_name">
+                        <i class="fas fa-robot"></i> Bot Name
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="bot_name" 
+                           name="bot_name" 
+                           placeholder="My Awesome Bot"
+                           value="{{ request.form.bot_name if request.form }}">
+                    <small class="text-muted">Give your bot a descriptive name</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-file-upload"></i> Bot File
+                    </label>
+                    <div class="file-input">
+                        <input type="file" id="bot_file" name="bot_file" accept=".py,.php,.js,.sh,.txt,.zip" required>
+                        <label for="bot_file" class="file-label" id="file-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <div>
+                                <strong>Click to upload</strong> or drag and drop
+                            </div>
+                            <div class="small text-muted mt-1">
+                                Supports: .py, .php, .js, .sh, .txt, .zip
+                            </div>
+                            <div id="file-name" class="mt-2 text-primary"></div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="bot_language">
+                        <i class="fas fa-code"></i> Language (Auto-detected)
+                    </label>
+                    <select class="form-select" id="bot_language" name="bot_language" disabled>
+                        <option value="auto">Auto-detect from file</option>
+                        <option value="python">Python</option>
+                        <option value="php">PHP</option>
+                        <option value="node">Node.js</option>
+                        <option value="bash">Bash</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="bot_description">
+                        <i class="fas fa-align-left"></i> Description (Optional)
+                    </label>
+                    <textarea class="form-control" 
+                              id="bot_description" 
+                              name="bot_description" 
+                              rows="3" 
+                              placeholder="What does this bot do?">{{ request.form.bot_description if request.form }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="auto_start" name="auto_start">
+                        <label class="form-check-label" for="auto_start">
+                            <i class="fas fa-play-circle"></i> Start bot immediately after upload
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <a href="/dashboard" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-upload"></i> Upload Bot
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Recent Uploads -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Your Recent Bots</h2>
+            </div>
+            {% if bots %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Language</th>
+                            <th>Status</th>
+                            <th>Uploaded</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bot in bots[:5] %}
+                        <tr>
+                            <td>{{ bot.name }}</td>
+                            <td>
+                                <span class="language-badge language-{{ bot.language }}">
+                                    {{ bot.language|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="bot-status status-{{ bot.status }}">
+                                    <i class="fas fa-circle"></i> {{ bot.status|upper }}
+                                </span>
+                            </td>
+                            <td>{{ bot.created_at[:10] }}</td>
+                            <td>
+                                <a href="/logs/{{ bot.id }}" class="btn btn-sm btn-outline">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/delete/{{ bot.id }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Delete this bot?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center p-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No bots uploaded yet</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('bot_file');
+    const fileName = document.getElementById('file-name');
+    const fileLabel = document.getElementById('file-label');
+    
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            fileName.textContent = `${file.name} (${formatBytes(file.size)})`;
+            fileLabel.style.borderColor = 'var(--primary)';
+            
+            // Auto-detect language from extension
+            const ext = file.name.split('.').pop().toLowerCase();
+            const langSelect = document.getElementById('bot_language');
+            
+            if (ext === 'py') langSelect.value = 'python';
+            else if (ext === 'php') langSelect.value = 'php';
+            else if (ext === 'js') langSelect.value = 'node';
+            else if (ext === 'sh') langSelect.value = 'bash';
+            else langSelect.value = 'auto';
+        } else {
+            fileName.textContent = '';
+            fileLabel.style.borderColor = '';
+        }
+    });
+    
+    // Drag and drop
+    fileLabel.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--primary)';
+        this.style.background = 'rgba(99, 102, 241, 0.05)';
+    });
+    
+    fileLabel.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        if (!fileInput.files.length) {
+            this.style.borderColor = '';
+            this.style.background = '';
+        }
+    });
+    
+    fileLabel.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--primary)';
+        this.style.background = '';
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+});
+
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+</script>
+{% endblock %}
